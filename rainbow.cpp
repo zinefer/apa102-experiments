@@ -67,6 +67,7 @@ int main(int argc, char* argv[]) {
 
   disable_lights_on_exit();
 
+  // Main effect loop
   while(true)
   {
 
@@ -76,6 +77,7 @@ int main(int argc, char* argv[]) {
       INITIAL_HUE = (INITIAL_HUE + 1) % 255;
     }
 
+    // Send 32 bits of zeros which initiates the leds for writing
     uint8_t buf[1];
     for(int i = 0; i < 4; i++) {
       buf[0] = 0x00;
@@ -84,6 +86,7 @@ int main(int argc, char* argv[]) {
 
     HsvColor color = { INITIAL_HUE, 255, 240 };
 
+    // Write brightness and color data for each LED
     for(int i = 0; i < NUM_LEDS; i++) {
       RgbColor frame_color = HsvToRgb(color);
 
@@ -104,6 +107,7 @@ int main(int argc, char* argv[]) {
       color.h = (color.h + HUE_DELTA) % 255;
     }
 
+    // Flush the data to the end of the string
     for(int i = 0; i < NUM_LEDS; i++) {
       buf[0] = 0xFF;
       wiringPiSPIDataRW(0, buf, 1);
