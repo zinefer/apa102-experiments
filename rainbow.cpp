@@ -1,13 +1,18 @@
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
 #include <iostream>
+#include <signal.h>
 #include <stdint.h>
 #include <unistd.h>
 
 #include <timer.cpp>
 #include <colors.cpp>
 
+void disable_lights(int s);
+void disable_lights_on_exit();
 int to_int(char const *s);
+
+int NUM_LEDS;
 
 int main(int argc, char* argv[]) {
   if (argc < 2) {
@@ -15,7 +20,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  int NUM_LEDS = to_int(argv[1]);
+  NUM_LEDS = to_int(argv[1]);
 
   uint8_t BRIGHTNESS = 15;
   uint8_t HUE_DELTA = 15;
@@ -59,6 +64,8 @@ int main(int argc, char* argv[]) {
   RgbColor white = { 255, 255, 255 };
 
   Timer timer;
+
+  disable_lights_on_exit();
 
   while(true)
   {
@@ -104,6 +111,44 @@ int main(int argc, char* argv[]) {
 
   }
 
+}
+
+void disable_lights_on_exit()
+{
+  struct sigaction sigIntHandler;
+
+  sigIntHandler.sa_handler = disable_lights;
+  sigemptyset(&sigIntHandler.sa_mask);
+  sigIntHandler.sa_flags = 0;
+
+  sigaction(SIGINT, &sigIntHandler, NULL);
+}
+
+void disable_lights(int s)
+{
+    uint8_t buf[1];
+    for(int i = 0; i < 4; i++) {
+      buf[0] = 0x00;
+      wiringPiSPIDataRW(0, buf, 1);
+    }
+
+    uint8_t frame[4];
+
+    for(int i = 0; i < NUM_LEDS; i++) {
+      frame[0] = 0b11100000 | (0b00011111 & 0);
+      frame[1] = 0x00;
+      frame[2] = 0x00;
+      frame[3] = 0x00;
+
+      wiringPiSPIDataRW(0, frame, 4);
+    }
+
+    for(int i = 0; i < NUM_LEDS; i++) {
+      buf[0] = 0xFF;
+      wiringPiSPIDataRW(0, buf, 1);
+    }
+
+    exit(1);
 }
 
 // https://stackoverflow.com/questions/4442658/c-parse-int-from-string
